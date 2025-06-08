@@ -1,0 +1,80 @@
+// ME427 Group 2C
+// Ceyda Erdem, Tolga Çoldur, Didem Onrat, Aral Yılmaz
+
+
+#include <max6675.h>
+
+// MAX6675 pins
+const int thermoDO = 12;   // SO
+const int thermoCS = 10;   // CS
+const int thermoCLK = 13;  // SCK
+
+MAX6675 thermocouple(thermoCLK, thermoCS, thermoDO);
+
+// Relay pin
+const int relayPin = 8;
+
+// Timers
+unsigned long heaterOnTime = 0;
+unsigned long heaterOffTime = 0;
+unsigned long totalSeconds = 0;
+
+// Heater state
+bool heaterOn = false;
+
+void setup() {
+  Serial.begin(9600);
+  delay(500);
+
+  pinMode(relayPin, OUTPUT);
+  digitalWrite(relayPin, HIGH); // Heater OFF initially
+}
+
+void loop() {
+  float thermoTemp = thermocouple.readCelsius();
+
+  // Heater control with hysteresis
+  if (thermoTemp < 57.0 && thermoTemp > 0) {
+    heaterOn = true;
+  } else if (thermoTemp >= 63.0) {
+    heaterOn = false;
+  }
+
+  // Apply heater state to relay
+  digitalWrite(relayPin, heaterOn ? LOW : HIGH);
+
+  // Update timers
+  if (heaterOn) {
+    heaterOnTime++;
+  } else {
+    heaterOffTime++;
+  }
+
+  totalSeconds++;
+
+  // Convert totalSeconds to HH:MM:SS
+  int hours = totalSeconds / 3600;
+  int minutes = (totalSeconds % 3600) / 60;
+  int seconds = totalSeconds % 60;
+
+  // Format and print time
+  if (hours < 10) Serial.print("0");
+  Serial.print(hours); Serial.print(":");
+  if (minutes < 10) Serial.print("0");
+  Serial.print(minutes); Serial.print(":");
+  if (seconds < 10) Serial.print("0");
+  Serial.print(seconds);
+
+  // Output information
+  Serial.print(" -> ,T = ,");
+  Serial.print(thermoTemp);
+  Serial.print(" ,degC , Heater: ");
+  Serial.print(heaterOn ? "ON" : "OFF");
+  Serial.print(" , counter for heater: ON = ,");
+  Serial.print(heaterOnTime);
+  Serial.print(" , counter for heater: OFF = ,");
+  Serial.print(heaterOffTime);
+  Serial.println(" ");
+
+  delay(1050); // 1-second interval
+}
